@@ -2,6 +2,18 @@
 
 A collection of AI agent skills for Obsidian workflows.
 
+## Install
+
+```sh
+npx skills add kriss-spy/obsidian-skills --all
+```
+
+To install specific skills:
+
+```sh
+npx skills add kriss-spy/obsidian-skills --skill obsidian-basics --skill obsidian-plugin-dev
+```
+
 ## Skills
 
 | Skill | Description |
