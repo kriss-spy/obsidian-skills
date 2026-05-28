@@ -1,0 +1,49 @@
+# --- Agent Skills Specifics ---
+# If your scripts or assets generate local logs or temporary data
+**/logs/
+**/temp/
+**/*.tmp
+.agent/
+.skills_cache/
+
+# --- Environment & Secrets ---
+# Skills often use scripts (Python/Node) which might require local env vars
+.env
+*.env
+.env.local
+.env.*.local
+.venv/
+env/
+venv/
+ENV/
+
+# --- Operating System Files ---
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- Scripting Artifacts ---
+# Python-based scripts (common in skills)
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# Node.js-based scripts
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.eslintcache
+
+# --- Asset Bloats ---
+# If your assets/ folder contains large raw source files you don't want in Git
+# (Note: Standard assets needed for the skill SHOULD be committed)
+assets/raw_sources/
+*.zip
+*.tar.gz
+
+# --- IDEs ---
+.vscode/
+.idea/
+*.sublime-project
