@@ -22,4 +22,5 @@ npx skills add kriss-spy/obsidian-skills --skill obsidian-basics --skill obsidia
 | `obsidian-mcp` | MCP server integration for Obsidian |
 | `obsidian-performance` | Performance optimization and vault benchmarking |
 | `obsidian-plugin-dev` | Obsidian plugin development, from scaffolding to publishing |
+| `obsidian-plugin-workspace` | Obsidian workspace API, custom views, pane management, and layout events |
 | `obsidian-visuals` | Visual content creation within Obsidian (diagrams, canvases, embeds) |
