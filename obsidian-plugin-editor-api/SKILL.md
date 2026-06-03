@@ -1,5 +1,5 @@
 ---
-name: obsidian-plugin-editor
+name: obsidian-plugin-editor-api
 description: Guide for integrating with the Obsidian editor through CodeMirror 6 extensions, the Editor API, and markdown post-processing. Use when building editor extensions, custom decorations, autocomplete, reading-view processors, or any feature that touches the editing surface or markdown rendering.
 triggers:
   - obsidian editor extension

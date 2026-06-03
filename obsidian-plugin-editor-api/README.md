@@ -1,4 +1,4 @@
-# obsidian-plugin-editor
+# obsidian-plugin-editor-api
 
 Integrate with the Obsidian editor through CodeMirror 6 extensions, the Editor API, and markdown post-processing.
 
