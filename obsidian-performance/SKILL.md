@@ -1,116 +1,550 @@
 ---
 name: obsidian-performance
-description: "Diagnose and optimize Obsidian vault performance issues. Use this when the user asks about Obsidian running slowly, vault performance optimization, debugging slow Obsidian behavior, plugin performance impact, or improving Obsidian responsiveness."
-risk: safe
-source: community
-date_added: "2026-05-17"
+description: Diagnose and optimize Obsidian vault performance issues programmatically using CDP/CLI eval, the Obsidian API, and Chrome DevTools. Use when the user reports slow startup, typing lag, high memory usage, unresponsive UI, or wants to audit vault health, plugin impact, and metadata integrity without manual clicking.
+triggers:
+  - obsidian slow
+  - obsidian performance
+  - obsidian lag
+  - obsidian startup slow
+  - obsidian high memory
+  - obsidian typing lag
+  - obsidian vault audit
+  - obsidian plugin performance
+  - obsidian optimize vault
+  - obsidian unresponsive
+  - obsidian debug performance
+  - obsidian heap snapshot
+  - obsidian metadata health
+  - obsidian broken links
+author: OpenCode
+version: 1.0.0
+created: 2026-06-03
 ---
 
-# Obsidian Performance Optimization
+# Obsidian Performance
 
-Diagnose and resolve Obsidian performance issues by analyzing plugin impact, vault structure, and configuration. Performance problems in Obsidian are more often caused by community plugins than by Obsidian itself.
+This skill treats performance diagnostics as a programmatic audit. Instead of guiding the user through manual UI clicks, the agent evaluates JavaScript directly in Obsidian's runtime (via CDP `Runtime.evaluate` or CLI `obsidian eval`) to inspect vault state, plugin impact, configuration, and metadata health. Fixes are applied through the same APIs.
 
 ## When to Use This Skill
 
-- User reports Obsidian is running slowly or lagging
-- User wants to optimize vault performance
-- User needs to debug why Obsidian is unresponsive
-- User wants to identify performance-heavy plugins
-- User asks about vault size impact on performance
+- Obsidian startup is slow or getting slower over time
+- The app feels laggy during typing, switching notes, or rendering
+- Memory usage is unexpectedly high
+- A specific plugin is suspected of causing performance degradation
+- The vault has grown large and the user wants an automated health audit
+- Console errors or warnings appear repeatedly
+- The user wants to identify and fix broken links, orphans, or circular references
+- Performance profiling via Chrome DevTools is needed
 
-## Core Workflow
+## Overview
 
-### Phase 1: Identify the Problem
+Obsidian performance issues usually stem from one of four sources:
 
-Ask the user to describe:
-1. What specific actions are slow? (startup, search, typing, switching notes, etc.)
-2. Approximate vault size (number of files, total size)
-3. Number of enabled community plugins
-4. When did the performance issue start?
+1. **Vault structure** — root clutter, orphaned attachments, or an excessive file count
+2. **Community plugins** — heavy plugins scanning the entire vault, live-preview enhancers, or canvas/Excalidraw integrations
+3. **Configuration** — hardware acceleration conflicts, live preview overhead, or overly broad file inclusion
+4. **Metadata integrity** — broken links, circular references, or unresolved cache entries forcing repeated re-indexing
 
-### Phase 2: Debug Using Obsidian's Built-in Tools
+This skill provides CDP/CLI-evaluable code for each phase. Run the snippets directly in Obsidian's context and act on the results.
 
-Guide the user to use Obsidian's performance debugging:
+---
 
-1. **Open the Command Palette** (`Ctrl/Cmd + P`)
-2. **Run "Show debug info"** - copies system info to clipboard
-3. **Open Developer Tools** (`Ctrl/Cmd + Shift + I`)
-   - Check Console for errors
-   - Check Performance tab to record and analyze slow operations
-4. **Safe Mode Test**: Restart Obsidian in Safe Mode (Settings > Community plugins > Safe mode) to isolate plugin-related issues
+## Phase 1: Programmatic Vault Audit
 
-Reference: [How to Debug why Obsidian is running slowly](https://publish.obsidian.md/hub/04+-+Guides%2C+Workflows%2C+%26+Courses/Guides/How+to+debug+why+Obsidian+is+running+slowly)
+Evaluate these snippets via CDP/CLI to get quantitative vault health metrics.
 
-### Phase 3: Plugin Analysis
+### Count Files by Type
 
-Community plugins are the most common cause of performance issues.
+```javascript
+const files = app.vault.getAllLoadedFiles();
+const markdown = files.filter(f => f.extension === 'md');
+const attachments = files.filter(f => !f.extension === 'md' && f instanceof require('obsidian').TFile);
+const folders = files.filter(f => f instanceof require('obsidian').TFolder);
 
-**High-impact plugins to check:**
-- Plugins that scan the entire vault frequently (search, graph, tag-related)
-- Plugins that modify the editor in real-time (syntax highlighters, live preview enhancers)
-- Plugins that process files on save (linters, formatters)
-- Plugins with canvas or Excalidraw integrations
+console.table({
+  totalFiles: files.length,
+  markdownFiles: markdown.length,
+  attachmentFiles: attachments.length,
+  folders: folders.length
+});
+```
 
-**Diagnostic steps:**
-1. Disable all community plugins (Safe Mode)
-2. If performance improves, re-enable plugins one by one
-3. Test after each enable to identify the culprit
-4. Check plugin settings for performance-related options (e.g., debounce delays, file limits)
+### Measure Total Vault Size
 
-Use `obsidian plugin list` via CLI to review installed plugins.
+```javascript
+const { exec } = require('child_process');
+const path = app.vault.adapter.getBasePath();
+exec(`du -sh "${path}"`, (err, stdout) => {
+  console.log('Vault size:', stdout.trim());
+});
+```
 
-### Phase 4: Vault Structure Optimization
+> [!tip]
+> On Windows, use `powershell -Command "(Get-ChildItem -Recurse | Measure-Object -Property Length -Sum).Sum"` instead of `du`.
 
-**Large vault considerations:**
-- Files in the root directory slow down indexing - use folder organization
-- Reduce number of tags per file
-- Avoid deeply nested folder structures (>5 levels)
-- Check for circular links or broken references
-- Consider excluding large folders (attachments, backups) via Settings > Files & Links > Excluded files
+### Detect Root Clutter
 
-**Attachment management:**
-- Store attachments in a dedicated folder
-- Compress or externalize large images/PDFs
-- Use external links for media files instead of embedding
+Files directly in the vault root slow down indexing because Obsidian must evaluate each one against inclusion rules.
 
-### Phase 5: Configuration Tuning
+```javascript
+const root = app.vault.getRoot();
+const rootFiles = root.children.filter(c => c instanceof require('obsidian').TFile);
+const rootFolders = root.children.filter(c => c instanceof require('obsidian').TFolder);
 
-**Settings to adjust:**
-- Settings > Editor > Live Preview (toggle to test performance)
-- Settings > Files & Links > Attachment folder path (consolidate attachments)
-- Settings > Appearance > Hardware acceleration (toggle if GPU issues)
-- Settings > Community plugins > Review and disable unused plugins
+console.log(`Root files: ${rootFiles.length}`);
+console.log(`Root folders: ${rootFolders.length}`);
+console.log('Root file names:', rootFiles.map(f => f.name));
+```
 
-**CLI commands for maintenance:**
-- `obsidian help` - list available commands
-- `obsidian daily` - open daily note directly
-- Use CLI for batch operations instead of manual UI interactions
+> [!caution]
+> More than ~50 files in the root is a strong signal for performance degradation. Consolidate into folders.
 
-## Quick Reference: Common Performance Fixes
+### List Largest Files
 
-| Symptom | Likely Cause | Fix |
-|---------|-------------|-----|
-| Slow startup | Too many plugins | Disable unused plugins, use Safe Mode |
-| Typing lag | Editor plugins | Disable syntax highlighters, live preview enhancers |
-| Search is slow | Large vault, many tags | Exclude folders, reduce tag usage |
-| Graph view crashes | Too many files/links | Filter graph, disable auto-refresh |
-| High memory usage | Canvas/Excalidraw files | Close unused tabs, limit canvas size |
-| Sync is slow | Many small files | Consolidate notes, reduce attachment count |
+```javascript
+const files = app.vault.getFiles().sort((a, b) => b.stat.size - a.stat.size);
+console.table(files.slice(0, 20).map(f => ({
+  path: f.path,
+  sizeBytes: f.stat.size,
+  sizeMB: (f.stat.size / 1024 / 1024).toFixed(2)
+})));
+```
 
-## Performance Optimization Checklist
+### Find Orphaned Attachments
 
-- [ ] Test in Safe Mode to isolate plugin issues
-- [ ] Review and disable unnecessary community plugins
-- [ ] Check Developer Tools Console for errors
-- [ ] Organize files into folders (avoid root clutter)
-- [ ] Set up attachment folder and consolidate media
-- [ ] Configure excluded files for non-note directories
-- [ ] Update Obsidian and all plugins to latest versions
-- [ ] Consider hardware acceleration settings
-- [ ] Review vault size and consider splitting if >10,000 files
+Attachments not referenced by any markdown file waste space and indexing time.
+
+```javascript
+const allFiles = app.vault.getFiles();
+const mdFiles = allFiles.filter(f => f.extension === 'md');
+const attachments = allFiles.filter(f => f.extension !== 'md');
+
+// Build a set of referenced attachment basenames (approximate)
+const referenced = new Set();
+for (const file of mdFiles) {
+  const content = await app.vault.cachedRead(file);
+  for (const att of attachments) {
+    if (content.includes(att.basename)) referenced.add(att.path);
+  }
+}
+
+const orphans = attachments.filter(a => !referenced.has(a.path));
+console.log(`Orphaned attachments: ${orphans.length}`);
+console.table(orphans.map(o => ({ path: o.path, sizeMB: (o.stat.size / 1024 / 1024).toFixed(2) })));
+```
+
+---
+
+## Phase 2: Programmatic Plugin Audit
+
+Community plugins are the most common cause of performance issues. Inspect them without manual safe-mode toggling.
+
+### Read Installed Plugin Manifests
+
+```javascript
+const enabled = app.plugins.enabledPlugins;
+const manifests = Object.entries(app.plugins.manifests)
+  .filter(([id]) => enabled.has(id))
+  .map(([id, m]) => ({ id, name: m.name, version: m.version, author: m.author }));
+
+console.log(`Enabled community plugins: ${manifests.length}`);
+console.table(manifests);
+```
+
+### Estimate Plugin Bundle Sizes
+
+Large `main.js` files indicate heavy plugins.
+
+```javascript
+const fs = require('fs');
+const path = require('path');
+const pluginDir = path.join(app.vault.adapter.getBasePath(), '.obsidian', 'plugins');
+
+const enabled = [...app.plugins.enabledPlugins];
+const sizes = enabled.map(id => {
+  const mainPath = path.join(pluginDir, id, 'main.js');
+  try {
+    const stat = fs.statSync(mainPath);
+    return { id, mainJsKB: (stat.size / 1024).toFixed(1) };
+  } catch {
+    return { id, mainJsKB: 'N/A' };
+  }
+}).sort((a, b) => parseFloat(b.mainJsKB || 0) - parseFloat(a.mainJsKB || 0));
+
+console.table(sizes);
+```
+
+### Flag Known High-Impact Plugins
+
+```javascript
+const heavyIds = [
+  'obsidian-excalidraw-plugin',   // Large canvas rendering
+  'dataview',                     // Heavy query re-evaluation
+  'obsidian-git',                 // Frequent disk / git ops
+  'obsidian-languagetool-plugin', // Real-time linting
+  'obsidian-style-settings',      // Large CSS injection
+  'obsidian-outliner',            // Deep DOM manipulation
+  'calendar',                     // Date-tree scanning
+  'obsidian-kanban',              // Board rendering overhead
+  'dbfolder',                     // Table views with many files
+  'obsidian-hover-editor',        // Popover instantiation
+];
+
+const enabled = [...app.plugins.enabledPlugins];
+const flagged = heavyIds.filter(id => enabled.includes(id));
+console.log('Flagged heavy plugins:', flagged);
+```
+
+> [!important]
+> These plugins are not inherently bad. They are known to be resource-intensive when used with large vaults or aggressive settings. Evaluate their impact before disabling.
+
+### Programmatically Disable a Plugin
+
+```javascript
+await app.plugins.disablePlugin('plugin-id-here');
+```
+
+### Programmatically Enable a Plugin
+
+```javascript
+await app.plugins.enablePlugin('plugin-id-here');
+```
+
+> [!tip]
+> To bisect a performance issue, disable half the plugins, test, then re-enable half of the disabled set. This is a binary search over the plugin set and is faster than one-by-one toggling.
+
+---
+
+## Phase 3: Programmatic Config Audit
+
+Read `app.json` and workspace state to identify problematic settings.
+
+### Read Core Settings
+
+```javascript
+const fs = require('fs');
+const path = require('path');
+const configPath = path.join(app.vault.adapter.getBasePath(), '.obsidian', 'app.json');
+const appJson = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+
+console.table({
+  hardwareAcceleration: appJson.hardwareAcceleration,
+  livePreview: appJson.livePreview,
+  attachmentFolderPath: appJson.attachmentFolderPath,
+  newFileLocation: appJson.newFileLocation,
+  newLinkFormat: appJson.newLinkFormat,
+  useMarkdownLinks: appJson.useMarkdownLinks,
+  excludedFiles: (appJson.userIgnoreFilters || []).length
+});
+```
+
+### Check Workspace Complexity
+
+Too many open leaves and splits increase DOM weight and memory pressure.
+
+```javascript
+let leafCount = 0;
+let splitCount = 0;
+
+function countItems(item) {
+  if (item.children) {
+    splitCount++;
+    item.children.forEach(countItems);
+  } else if (item.view) {
+    leafCount++;
+  }
+}
+
+countItems(app.workspace.rootSplit);
+
+console.table({
+  leaves: leafCount,
+  splits: splitCount,
+  deferredLeaves: app.workspace.getLeavesOfType('empty').filter(l => l.isDeferred).length
+});
+```
+
+### Check Excluded Files List
+
+```javascript
+const excluded = app.vault.config?.userIgnoreFilters || [];
+console.log('Excluded patterns:', excluded);
+```
+
+> [!note]
+> If large folders (backups, `.git`, node_modules, attachment dumps) are not excluded, Obsidian indexes them unnecessarily.
+
+---
+
+## Phase 4: Metadata & Link Health
+
+The metadata cache drives graph view, backlinks, and Dataview. Broken or circular links force re-resolution and slow editing.
+
+### Inspect Resolved and Unresolved Links
+
+```javascript
+const resolved = app.metadataCache.resolvedLinks;
+const unresolved = app.metadataCache.unresolvedLinks;
+
+let resolvedCount = 0;
+let unresolvedCount = 0;
+
+for (const file of Object.keys(resolved)) {
+  resolvedCount += Object.keys(resolved[file]).length;
+}
+for (const file of Object.keys(unresolved)) {
+  unresolvedCount += Object.keys(unresolved[file]).length;
+}
+
+console.table({ resolvedCount, unresolvedCount });
+```
+
+### List All Broken Links
+
+```javascript
+const unresolved = app.metadataCache.unresolvedLinks;
+const broken = [];
+
+for (const [sourcePath, targets] of Object.entries(unresolved)) {
+  for (const target of Object.keys(targets)) {
+    broken.push({ source: sourcePath, brokenLink: target, count: targets[target] });
+  }
+}
+
+console.log(`Total broken link references: ${broken.length}`);
+console.table(broken.slice(0, 30));
+```
+
+### Detect Circular References
+
+A simple depth-limited traversal detects obvious circular wikilink chains.
+
+```javascript
+const resolved = app.metadataCache.resolvedLinks;
+const files = Object.keys(resolved);
+
+function hasCircular(start, current, depth, visited) {
+  if (depth > 10) return false;
+  if (visited.has(current)) return current === start;
+  visited.add(current);
+  const neighbors = Object.keys(resolved[current] || {});
+  for (const n of neighbors) {
+    if (hasCircular(start, n, depth + 1, new Set(visited))) return true;
+  }
+  return false;
+}
+
+const circular = [];
+for (const file of files.slice(0, 500)) { // sample first 500
+  if (hasCircular(file, file, 0, new Set())) circular.push(file);
+}
+console.log(`Potential circular references found: ${circular.length}`);
+console.log(circular.slice(0, 20));
+```
+
+> [!caution]
+> Circular references are not always harmful, but deep cycles can cause stack issues in plugins that recursively traverse links.
+
+---
+
+## Phase 5: Automated Fixes
+
+Apply fixes directly through the Obsidian API. Do not ask the user to open Settings and click around.
+
+### Exclude an Attachment Folder
+
+```javascript
+const current = app.vault.config.userIgnoreFilters || [];
+if (!current.includes('Attachments')) {
+  app.vault.setConfig('userIgnoreFilters', [...current, 'Attachments']);
+}
+```
+
+### Disable a Suspected Heavy Plugin
+
+```javascript
+const heavy = ['obsidian-excalidraw-plugin', 'dataview'];
+for (const id of heavy) {
+  if (app.plugins.enabledPlugins.has(id)) {
+    await app.plugins.disablePlugin(id);
+    console.log('Disabled:', id);
+  }
+}
+```
+
+### Close Deferred or Unused Leaves
+
+```javascript
+const leaves = app.workspace.getLeavesOfType('empty');
+for (const leaf of leaves) {
+  if (leaf.isDeferred || !leaf.view?.file) {
+    leaf.detach();
+  }
+}
+```
+
+### Consolidate Root Files into a Folder
+
+```javascript
+const root = app.vault.getRoot();
+const rootFiles = root.children.filter(c => c instanceof require('obsidian').TFile);
+const inboxPath = 'Inbox';
+
+// Ensure Inbox exists
+if (!app.vault.getAbstractFileByPath(inboxPath)) {
+  await app.vault.createFolder(inboxPath);
+}
+
+for (const file of rootFiles) {
+  const newPath = `${inboxPath}/${file.name}`;
+  if (!app.vault.getAbstractFileByPath(newPath)) {
+    await app.vault.rename(file, newPath);
+  }
+}
+```
+
+> [!important]
+> Always verify that the destination path does not already exist before calling `vault.rename()` to avoid overwrites.
+
+---
+
+## Phase 6: Performance Monitoring via CDP
+
+When Obsidian is running in an Electron environment with remote debugging enabled, use Chrome DevTools Protocol (CDP) for deeper profiling.
+
+### Capture Startup Timeline
+
+```javascript
+// CDP Runtime.evaluate via CLI or remote debugger
+// Record a performance profile snippet:
+
+const start = performance.now();
+// Trigger a targeted action, e.g. open a large note:
+const file = app.vault.getAbstractFileByPath('Large Note.md');
+if (file) {
+  const leaf = app.workspace.getLeaf('tab');
+  await leaf.openFile(file);
+}
+const end = performance.now();
+console.log(`Open duration: ${(end - start).toFixed(2)}ms`);
+```
+
+### Scrape Console Errors
+
+Enable CDP `Runtime.consoleAPICalled` and filter for errors:
+
+```javascript
+// Evaluated inside Obsidian via CDP:
+const errors = [];
+const originalError = console.error;
+console.error = (...args) => {
+  errors.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
+  originalError.apply(console, args);
+};
+
+// After a short period, inspect `errors`:
+console.log('Captured errors:', errors.length);
+errors.slice(0, 20).forEach(e => console.log(e));
+```
+
+### Take a Memory Heap Snapshot
+
+If the remote debugger exposes `HeapProfiler`, trigger a snapshot and stream it:
+
+```javascript
+// Requires CDP HeapProfiler domain enabled
+// Via CLI wrapper or remote debugger:
+// { method: 'HeapProfiler.takeHeapSnapshot', params: { reportProgress: true } }
+
+// Alternatively, estimate heap growth from JS:
+let heapBefore = 0;
+if (performance.memory) {
+  heapBefore = performance.memory.usedJSHeapSize;
+  // trigger heavy operation
+  await app.vault.cachedRead(app.vault.getFiles()[0]);
+  const heapAfter = performance.memory.usedJSHeapSize;
+  console.log(`Heap delta: ${((heapAfter - heapBefore) / 1024 / 1024).toFixed(2)} MB`);
+}
+```
+
+> [!note]
+> `performance.memory` is only available in Chromium contexts with `--enable-precise-memory-info`. Use CDP `Runtime.getHeapUsage()` if the flag is not set.
+
+### Record Slow Operations
+
+```javascript
+const slowOps = [];
+const wrap = (obj, method, threshold = 50) => {
+  const orig = obj[method].bind(obj);
+  obj[method] = async (...args) => {
+    const t0 = performance.now();
+    const result = await orig(...args);
+    const t1 = performance.now();
+    if (t1 - t0 > threshold) {
+      slowOps.push({ method, duration: (t1 - t0).toFixed(1), args: args.length });
+    }
+    return result;
+  };
+};
+
+// Example: wrap vault read
+wrap(app.vault, 'read', 100);
+// wrap(app.metadataCache, 'getFileCache', 50); // if writable
+
+console.log('Slow operations buffer initialized. Interact with vault, then inspect `slowOps`.');
+```
+
+---
+
+## When to Ask the User
+
+The agent should ask the user only for information that cannot be measured programmatically:
+
+- **Subjective typing lag** — perceived responsiveness between keystroke and character render
+- **Specific hardware constraints** — e.g., running on a low-RAM VM where the agent cannot inspect host specs
+- **Network sync issues** — Sync performance depends on external network conditions and remote server state
+- **OS-level interference** — antivirus scans, filesystem watchers, or OS indexing tools blocking the vault path
+- **Battery / thermal throttling** — mobile or laptop power-state changes affecting Electron render performance
+
+Everything else — file counts, plugin sizes, link health, settings values, memory deltas — should be evaluated automatically.
+
+---
+
+## Common Performance Fixes Table
+
+| Symptom | Likely Cause | Programmatic Fix |
+|---------|-------------|------------------|
+| Slow startup | Too many plugins or large deferred tab count | Disable heavy plugins; close deferred leaves |
+| Typing lag | Editor-enhancing plugins or live preview | Disable syntax highlighters; toggle `livePreview` off temporarily via `app.vault.setConfig` |
+| Search is slow | Large vault with un-excluded folders | Add attachment/backup folders to `userIgnoreFilters` |
+| Graph view crashes | Excessive links or circular references | Resolve broken links; filter graph by path; reduce metadata cache pressure |
+| High memory usage | Canvas/Excalidraw files or many open leaves | Close unused leaves; disable canvas-heavy plugins; consolidate root files |
+| Sync is slow | Many small files or root clutter | Consolidate notes into folders; compress or externalize large attachments |
+| UI stutter during layout | Complex split tree with many leaves | Detach empty leaves; reduce split nesting |
+| Repeated console errors | Misconfigured plugin | Disable plugin; inspect `console.error` buffer for stack trace |
+
+---
+
+## Quick Reference Checklist
+
+- [ ] Run Phase 1 vault audit (file counts, root clutter, largest files, orphans)
+- [ ] Run Phase 2 plugin audit (enabled plugins, bundle sizes, flag heavy plugins)
+- [ ] Run Phase 3 config audit (hardware acceleration, live preview, workspace complexity, excluded files)
+- [ ] Run Phase 4 metadata audit (resolved/unresolved counts, broken links, circular references)
+- [ ] Apply Phase 5 automated fixes (exclude folders, disable heavy plugins, close deferred leaves, consolidate root)
+- [ ] Run Phase 6 CDP profiling if issue persists (heap delta, console errors, slow operation wrapping)
+- [ ] Re-enable plugins one by one if bisecting to isolate a culprit
+- [ ] Ask user only for subjective lag reports or external factors (network, OS, hardware)
+
+---
 
 ## References
 
-- [Obsidian Debug Guide](https://publish.obsidian.md/hub/04+-+Guides%2C+Workflows%2C+%26+Courses/Guides/How+to+debug+why+Obsidian+is+running+slowly)
+- [How to Debug why Obsidian is running slowly](https://publish.obsidian.md/hub/04+-+Guides%2C+Workflows%2C+%26+Courses/Guides/How+to+debug+why+Obsidian+is+running+slowly)
 - [Obsidian CLI Documentation](https://help.obsidian.md/cli)
-- [Obsidian Community Plugins](https://obsidian.md/plugins)
+- [Obsidian TypeScript API — Vault](https://docs.obsidian.md/Reference/TypeScript+API/Vault)
+- [Obsidian TypeScript API — MetadataCache](https://docs.obsidian.md/Reference/TypeScript+API/MetadataCache)
+- [Obsidian TypeScript API — Workspace](https://docs.obsidian.md/Reference/TypeScript+API/Workspace)
+- [Obsidian TypeScript API — Plugins](https://docs.obsidian.md/Reference/TypeScript+API/Plugins)
+- [Chrome DevTools Protocol — Runtime](https://chromedevtools.github.io/devtools-protocol/tot/Runtime/)
+- [Chrome DevTools Protocol — HeapProfiler](https://chromedevtools.github.io/devtools-protocol/tot/HeapProfiler/)
