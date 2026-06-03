@@ -18,6 +18,18 @@ created: 2026-04-15
 
 This skill should be used when working with the Obsidian note-taking application, including vault management, CLI operations, plugin development, and GUI automation via Chrome DevTools Protocol (CDP).
 
+## When to Use This Skill
+
+- Working with Obsidian vaults (creating, organizing, managing)
+- Using the Obsidian CLI for automation and scripting
+- Automating Obsidian via Chrome DevTools Protocol (CDP)
+- Need quick reference for Obsidian markdown syntax and wiki-links
+- Troubleshooting CDP connections or CLI issues
+- General Obsidian knowledge (vault structure, configuration, APIs)
+
+> [!tip]
+> For deep plugin development — scaffolding, manifest configuration, workspace API, custom views, and release builds — see the `obsidian-plugin-bootstrap` and `obsidian-plugin-workspace` skills.
+
 ## Overview
 
 Obsidian is a powerful markdown-based note-taking application built on Electron. It features a vault-centric architecture, extensive plugin ecosystem, and deep customization capabilities. This skill covers:
@@ -180,6 +192,9 @@ brew install obsidian
 # Or download from https://obsidian.md/download
 ```
 
+> [!tip]
+> The `brew install obsidian` formula may not be available in all regions; the official download at https://obsidian.md/download is always current.
+
 ### CLI Commands
 
 #### Vault Management
@@ -228,6 +243,9 @@ obsidian plugin disable "plugin-id"
 obsidian plugin reload "plugin-id"
 ```
 
+> [!tip]
+> `obsidian plugin reload` is the fastest way to test plugin changes during development. Combine it with `npm run dev` in your plugin project for a tight feedback loop.
+
 #### JavaScript Evaluation
 
 ```bash
@@ -240,6 +258,9 @@ obsidian eval --file script.js
 # Example: Get vault statistics
 obsidian eval --code "console.log(JSON.stringify({files: app.vault.getFiles().length, lastOpen: app.workspace.getActiveFile()?.path}))"
 ```
+
+> [!caution]
+> `obsidian eval` executes JavaScript inside Obsidian's renderer process with full access to `app`, `window`, and Node.js APIs. Only run trusted code.
 
 #### Developer Tools
 
@@ -256,6 +277,9 @@ obsidian dev:dom --selector ".nav-file-title"
 # Enable debug mode
 obsidian dev:debug
 ```
+
+> [!note]
+> `obsidian dev:errors` streams the last N console errors. Use it after reproducing a bug to capture stack traces without opening Developer Tools manually.
 
 #### Search Operations
 
@@ -277,11 +301,17 @@ export OBSIDIAN_VAULT_PATH="/path/to/vault"
 export OBSIDIAN_DEBUG=1
 ```
 
+> [!tip]
+> Set `OBSIDIAN_VAULT_PATH` in your shell profile to avoid passing `--path` on every command.
+
 ---
 
 ## Part 3: CDP (Chrome DevTools Protocol) Automation
 
 Obsidian is built on Electron, which supports the Chrome DevTools Protocol (CDP). This allows programmatic control of the Obsidian GUI for automation, testing, and integration.
+
+> [!caution]
+> Only run CDP on localhost. The debugging port has no authentication; exposing it on a network interface is a security risk.
 
 ### Starting Obsidian with CDP
 
@@ -313,6 +343,9 @@ curl http://localhost:9222/json/version
 # List available targets
 curl http://localhost:9222/json/list
 ```
+
+> [!tip]
+> Save the `webSocketDebuggerUrl` from `/json/list`; it includes a random UUID that acts as an implicit token.
 
 ### CDP WebSocket Connection
 
@@ -374,7 +407,9 @@ async function evalInObsidian(ws, expression) {
   console.log('File count:', result.value);
   ws.close();
 })();
-```
+
+> [!important]
+> Always pass `awaitPromise: true` when evaluating async code via CDP. Without it, `Runtime.evaluate` returns a Promise object instead of the resolved value.
 
 ### Common CDP Operations
 
@@ -425,6 +460,9 @@ ws.send(JSON.stringify({
 });
 ```
 
+> [!tip]
+> For PDF or print output, set `format: 'jpeg'` with `quality: 90` to balance file size and fidelity.
+
 #### DOM Inspection
 ```javascript
 // Query DOM elements
@@ -465,6 +503,9 @@ await evalInObsidian(ws, `
 - **Use CLI for:** Day-to-day operations, vault management, simple automation
 - **Use CDP for:** E2E testing, DOM manipulation, screenshots, complex automation
 
+> [!note]
+> You can combine CLI and CDP in the same workflow: use CLI for file operations and CDP for DOM verification or screenshots.
+
 ### MCP Servers for CDP
 
 Several MCP servers provide CDP integration:
@@ -481,6 +522,9 @@ obsidian-devtools-mcp
 ```
 
 These servers expose CDP functionality as MCP tools that can be used with Claude Code, GitHub Copilot, and other AI assistants.
+
+> [!tip]
+> If you are writing a plugin, prefer `obsidian plugin reload` via CLI over CDP `Runtime.evaluate` for reloading. It is faster and avoids WebSocket overhead.
 
 ---
 
@@ -584,6 +628,19 @@ obsidian vault list --debug
 - Run with appropriate user privileges
 
 ---
+
+## Quick Reference Checklist
+
+- [ ] Verify Obsidian is installed and CLI is available (`obsidian --version`)
+- [ ] Know the vault path and confirm `.obsidian/` directory exists
+- [ ] Set `OBSIDIAN_VAULT_PATH` environment variable (optional)
+- [ ] Launch Obsidian with `--remote-debugging-port=9222` when using CDP
+- [ ] Verify CDP endpoint responds (`curl http://localhost:9222/json/version`)
+- [ ] Choose CLI for day-to-day automation, CDP for DOM/testing tasks
+- [ ] Keep the debugging port local only; never expose 9222 publicly
+- [ ] Use `obsidian plugin reload <id>` for fast plugin iteration
+- [ ] Prefer `obsidian eval` for quick JavaScript snippets over full CDP scripts
+- [ ] Check `obsidian dev:errors` after plugin crashes to capture stack traces
 
 ## Additional Resources
 
