@@ -44,9 +44,59 @@ Community plugins are the most common cause of Obsidian performance issues. This
 
 ---
 
+## Phase 0: Static Disk Analysis (When Obsidian Is Not Running)
+
+When Obsidian is not running, CDP/CLI eval is unavailable. Use these shell commands to audit the vault statically. **Always filter by `community-plugins.json`.**
+
+### List Enabled Plugins from Disk
+
+```bash
+# Correct: only enabled plugins
+python3 -c "import sys,json; print('\n'.join(json.load(sys.stdin)))" \
+  < /path/to/vault/.obsidian/community-plugins.json
+```
+
+### Check Enabled Plugin Data for Refresh Timers
+
+```bash
+enabled=$(python3 -c "import sys,json; print(' '.join(json.load(sys.stdin)))" < /path/to/vault/.obsidian/community-plugins.json)
+for p in $enabled; do
+  f="/path/to/vault/.obsidian/plugins/$p/data.json"
+  if [ -f "$f" ]; then
+    interval=$(python3 -c "import sys,json; d=json.load(sys.stdin); val=d.get('refreshInterval', d.get('autoSaveInterval', d.get('refreshSourceControlTimer', 'N/A'))); print(val)" < "$f" 2>/dev/null)
+    if [ "$interval" != "N/A" ] && [ "$interval" != "0" ] && [ "$interval" != "None" ]; then
+      echo "$p: $interval"
+    fi
+  fi
+done | sort -t: -k2 -rn
+```
+
+> [!caution]
+> Never use `.obsidian/plugins/*/data.json` without first filtering to enabled plugins via `community-plugins.json`. Disabled plugins leave `data.json` behind, causing false positives.
+
+---
+
 ## Phase 1: Coarse Plugin Audit
 
 Quick proxy metrics that require no external tools.
+
+> [!important]
+> **Always distinguish INSTALLED vs ENABLED plugins.** Obsidian keeps `data.json` files for disabled plugins too. If you are doing static filesystem analysis instead of CDP/CLI eval, you MUST cross-reference against `.obsidian/community-plugins.json`.
+>
+> | Approach | Filter to apply |
+> |----------|----------------|
+> | CDP / CLI `obsidian eval` (preferred) | `app.plugins.enabledPlugins` |
+> | Static disk analysis (fallback) | `.obsidian/community-plugins.json` |
+>
+> **Incorrect** (will report disabled plugins as active):
+> ```bash
+> for f in .obsidian/plugins/*/data.json  # ❌ All 152 installed
+> ```
+> **Correct** (only examines enabled plugins):
+> ```bash
+> enabled=$(cat .obsidian/community-plugins.json | jq -r '.[]')
+> for p in $enabled; do ... .obsidian/plugins/$p/data.json ... done
+> ```
 
 ### Read Installed Plugin Manifests
 
@@ -435,6 +485,9 @@ Everything else — plugin bundle sizes, CPU profiles, memory deltas, method tim
 
 ## Quick Reference Checklist
 
+- [ ] If Obsidian is NOT running, use Phase 0 static disk analysis with `community-plugins.json` filtering
+- [ ] If Obsidian IS running, use CDP/CLI eval with `app.plugins.enabledPlugins` filtering
+- [ ] **Verify:** Did you cross-reference against `community-plugins.json` before reading any `data.json`? (Prevent disabled plugin false positives)
 - [ ] Run Phase 1 coarse audit (manifests, bundle sizes, flag heavy plugins)
 - [ ] Run Phase 2 bisection if the culprit is unknown and there are many plugins
 - [ ] Run Phase 3 CDP CPU profiling if Obsidian is on `--remote-debugging-port` and precise attribution is needed
