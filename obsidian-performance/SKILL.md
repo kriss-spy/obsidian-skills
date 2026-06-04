@@ -1,6 +1,6 @@
 ---
 name: obsidian-performance
-description: Diagnose and optimize Obsidian vault performance issues programmatically using CDP/CLI eval, the Obsidian API, and Chrome DevTools. Use when the user reports slow startup, typing lag, high memory usage, unresponsive UI, or wants to audit vault health, plugin impact, and metadata integrity without manual clicking.
+description: Diagnose and optimize Obsidian vault performance issues programmatically using CDP/CLI eval, the Obsidian API, and Chrome DevTools. Covers vault structure, configuration, metadata health, and general CDP monitoring. For precise per-plugin CPU/memory attribution and plugin bisection, use the obsidian-plugin-performance-diagnose skill.
 triggers:
   - obsidian slow
   - obsidian performance
@@ -9,7 +9,6 @@ triggers:
   - obsidian high memory
   - obsidian typing lag
   - obsidian vault audit
-  - obsidian plugin performance
   - obsidian optimize vault
   - obsidian unresponsive
   - obsidian debug performance
@@ -41,9 +40,12 @@ This skill treats performance diagnostics as a programmatic audit. Instead of gu
 Obsidian performance issues usually stem from one of four sources:
 
 1. **Vault structure** — root clutter, orphaned attachments, or an excessive file count
-2. **Community plugins** — heavy plugins scanning the entire vault, live-preview enhancers, or canvas/Excalidraw integrations
-3. **Configuration** — hardware acceleration conflicts, live preview overhead, or overly broad file inclusion
-4. **Metadata integrity** — broken links, circular references, or unresolved cache entries forcing repeated re-indexing
+2. **Configuration** — hardware acceleration conflicts, live preview overhead, or overly broad file inclusion
+3. **Metadata integrity** — broken links, circular references, or unresolved cache entries forcing repeated re-indexing
+4. **Community plugins** — heavy plugins scanning the entire vault, live-preview enhancers, or canvas/Excalidraw integrations
+
+> [!note]
+> Plugin-specific diagnosis, bisection, CPU profiling, and per-plugin memory attribution are handled by the **obsidian-plugin-performance-diagnose** skill. This skill focuses on vault health, configuration, metadata, and general CDP monitoring.
 
 This skill provides CDP/CLI-evaluable code for each phase. Run the snippets directly in Obsidian's context and act on the results.
 
@@ -135,87 +137,7 @@ console.table(orphans.map(o => ({ path: o.path, sizeMB: (o.stat.size / 1024 / 10
 
 ---
 
-## Phase 2: Programmatic Plugin Audit
-
-Community plugins are the most common cause of performance issues. Inspect them without manual safe-mode toggling.
-
-### Read Installed Plugin Manifests
-
-```javascript
-const enabled = app.plugins.enabledPlugins;
-const manifests = Object.entries(app.plugins.manifests)
-  .filter(([id]) => enabled.has(id))
-  .map(([id, m]) => ({ id, name: m.name, version: m.version, author: m.author }));
-
-console.log(`Enabled community plugins: ${manifests.length}`);
-console.table(manifests);
-```
-
-### Estimate Plugin Bundle Sizes
-
-Large `main.js` files indicate heavy plugins.
-
-```javascript
-const fs = require('fs');
-const path = require('path');
-const pluginDir = path.join(app.vault.adapter.getBasePath(), '.obsidian', 'plugins');
-
-const enabled = [...app.plugins.enabledPlugins];
-const sizes = enabled.map(id => {
-  const mainPath = path.join(pluginDir, id, 'main.js');
-  try {
-    const stat = fs.statSync(mainPath);
-    return { id, mainJsKB: (stat.size / 1024).toFixed(1) };
-  } catch {
-    return { id, mainJsKB: 'N/A' };
-  }
-}).sort((a, b) => parseFloat(b.mainJsKB || 0) - parseFloat(a.mainJsKB || 0));
-
-console.table(sizes);
-```
-
-### Flag Known High-Impact Plugins
-
-```javascript
-const heavyIds = [
-  'obsidian-excalidraw-plugin',   // Large canvas rendering
-  'dataview',                     // Heavy query re-evaluation
-  'obsidian-git',                 // Frequent disk / git ops
-  'obsidian-languagetool-plugin', // Real-time linting
-  'obsidian-style-settings',      // Large CSS injection
-  'obsidian-outliner',            // Deep DOM manipulation
-  'calendar',                     // Date-tree scanning
-  'obsidian-kanban',              // Board rendering overhead
-  'dbfolder',                     // Table views with many files
-  'obsidian-hover-editor',        // Popover instantiation
-];
-
-const enabled = [...app.plugins.enabledPlugins];
-const flagged = heavyIds.filter(id => enabled.includes(id));
-console.log('Flagged heavy plugins:', flagged);
-```
-
-> [!important]
-> These plugins are not inherently bad. They are known to be resource-intensive when used with large vaults or aggressive settings. Evaluate their impact before disabling.
-
-### Programmatically Disable a Plugin
-
-```javascript
-await app.plugins.disablePlugin('plugin-id-here');
-```
-
-### Programmatically Enable a Plugin
-
-```javascript
-await app.plugins.enablePlugin('plugin-id-here');
-```
-
-> [!tip]
-> To bisect a performance issue, disable half the plugins, test, then re-enable half of the disabled set. This is a binary search over the plugin set and is faster than one-by-one toggling.
-
----
-
-## Phase 3: Programmatic Config Audit
+## Phase 2: Programmatic Config Audit
 
 Read `app.json` and workspace state to identify problematic settings.
 
@@ -276,7 +198,7 @@ console.log('Excluded patterns:', excluded);
 
 ---
 
-## Phase 4: Metadata & Link Health
+## Phase 3: Metadata & Link Health
 
 The metadata cache drives graph view, backlinks, and Dataview. Broken or circular links force re-resolution and slow editing.
 
@@ -347,7 +269,7 @@ console.log(circular.slice(0, 20));
 
 ---
 
-## Phase 5: Automated Fixes
+## Phase 4: Automated Fixes
 
 Apply fixes directly through the Obsidian API. Do not ask the user to open Settings and click around.
 
@@ -357,18 +279,6 @@ Apply fixes directly through the Obsidian API. Do not ask the user to open Setti
 const current = app.vault.config.userIgnoreFilters || [];
 if (!current.includes('Attachments')) {
   app.vault.setConfig('userIgnoreFilters', [...current, 'Attachments']);
-}
-```
-
-### Disable a Suspected Heavy Plugin
-
-```javascript
-const heavy = ['obsidian-excalidraw-plugin', 'dataview'];
-for (const id of heavy) {
-  if (app.plugins.enabledPlugins.has(id)) {
-    await app.plugins.disablePlugin(id);
-    console.log('Disabled:', id);
-  }
 }
 ```
 
@@ -408,9 +318,12 @@ for (const file of rootFiles) {
 
 ---
 
-## Phase 6: Performance Monitoring via CDP
+## Phase 5: Performance Monitoring via CDP
 
 When Obsidian is running in an Electron environment with remote debugging enabled, use Chrome DevTools Protocol (CDP) for deeper profiling.
+
+> [!note]
+> For per-plugin CPU profiling and attribution, use the **obsidian-plugin-performance-diagnose** skill, which provides CDP `Profiler` domain snippets and automated profile-to-plugin mapping.
 
 ### Capture Startup Timeline
 
@@ -506,7 +419,7 @@ The agent should ask the user only for information that cannot be measured progr
 - **OS-level interference** — antivirus scans, filesystem watchers, or OS indexing tools blocking the vault path
 - **Battery / thermal throttling** — mobile or laptop power-state changes affecting Electron render performance
 
-Everything else — file counts, plugin sizes, link health, settings values, memory deltas — should be evaluated automatically.
+Everything else — file counts, link health, settings values, memory deltas — should be evaluated automatically.
 
 ---
 
@@ -514,26 +427,25 @@ Everything else — file counts, plugin sizes, link health, settings values, mem
 
 | Symptom | Likely Cause | Programmatic Fix |
 |---------|-------------|------------------|
-| Slow startup | Too many plugins or large deferred tab count | Disable heavy plugins; close deferred leaves |
-| Typing lag | Editor-enhancing plugins or live preview | Disable syntax highlighters; toggle `livePreview` off temporarily via `app.vault.setConfig` |
+| Slow startup | Large deferred tab count or vault structure | Close deferred leaves; consolidate root files |
+| Typing lag | Live preview overhead or vault config | Toggle `livePreview` off temporarily via `app.vault.setConfig` |
 | Search is slow | Large vault with un-excluded folders | Add attachment/backup folders to `userIgnoreFilters` |
 | Graph view crashes | Excessive links or circular references | Resolve broken links; filter graph by path; reduce metadata cache pressure |
-| High memory usage | Canvas/Excalidraw files or many open leaves | Close unused leaves; disable canvas-heavy plugins; consolidate root files |
+| High memory usage | Many open leaves or large vault | Close unused leaves; consolidate root files |
 | Sync is slow | Many small files or root clutter | Consolidate notes into folders; compress or externalize large attachments |
 | UI stutter during layout | Complex split tree with many leaves | Detach empty leaves; reduce split nesting |
-| Repeated console errors | Misconfigured plugin | Disable plugin; inspect `console.error` buffer for stack trace |
+| Repeated console errors | Plugin or core misconfiguration | Inspect `console.error` buffer for stack trace; use obsidian-plugin-performance-diagnose for plugin attribution |
 
 ---
 
 ## Quick Reference Checklist
 
 - [ ] Run Phase 1 vault audit (file counts, root clutter, largest files, orphans)
-- [ ] Run Phase 2 plugin audit (enabled plugins, bundle sizes, flag heavy plugins)
-- [ ] Run Phase 3 config audit (hardware acceleration, live preview, workspace complexity, excluded files)
-- [ ] Run Phase 4 metadata audit (resolved/unresolved counts, broken links, circular references)
-- [ ] Apply Phase 5 automated fixes (exclude folders, disable heavy plugins, close deferred leaves, consolidate root)
-- [ ] Run Phase 6 CDP profiling if issue persists (heap delta, console errors, slow operation wrapping)
-- [ ] Re-enable plugins one by one if bisecting to isolate a culprit
+- [ ] Run Phase 2 config audit (hardware acceleration, live preview, workspace complexity, excluded files)
+- [ ] Run Phase 3 metadata audit (resolved/unresolved counts, broken links, circular references)
+- [ ] Apply Phase 4 automated fixes (exclude folders, close deferred leaves, consolidate root)
+- [ ] Run Phase 5 CDP profiling if issue persists (heap delta, console errors, slow operation wrapping)
+- [ ] If plugins are suspected, delegate to the obsidian-plugin-performance-diagnose skill
 - [ ] Ask user only for subjective lag reports or external factors (network, OS, hardware)
 
 ---
