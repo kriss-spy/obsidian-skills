@@ -1,0 +1,15 @@
+{
+  "name": "obsidian-plugin-review-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local automated-review runner for Obsidian plugins. Bundles the eslint config and supporting scripts.",
+  "scripts": {
+    "setup": "npm install"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-obsidianmd": "^0.3.0"
+  }
+}

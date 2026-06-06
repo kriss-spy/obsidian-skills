@@ -28,6 +28,7 @@ npx skills add kriss-spy/obsidian-skills --skill obsidian-basics --skill obsidia
 | `obsidian-plugin-modals` | Modal dialogs, suggestion popups, and context menus |
 | `obsidian-plugin-react` | Integrate React into Obsidian plugins |
 | `obsidian-plugin-release` | Release, version, and distribute Obsidian plugins |
+| `obsidian-plugin-review` | Run the local equivalent of the automated review on an Obsidian plugin |
 | `obsidian-plugin-settings` | Plugin settings UI and persistence |
 | `obsidian-plugin-styling` | Style Obsidian plugins with CSS |
 | `obsidian-plugin-svelte` | Integrate Svelte into Obsidian plugins |
