@@ -59,11 +59,36 @@ set +e
 # Discover TS files in src/ and at the root. Eslint's flat config
 # doesn't expand shell globs the way the legacy config did, so we
 # expand here with `find` and pass the explicit list.
+#
+# Test files (*.test.ts, *.spec.ts) and __tests__/ directories are
+# excluded by default — they are never bundled into main.js so the
+# official reviewer never sees them, and flagging them here would
+# diverge from the dashboard's findings. Override the include set
+# with $LINT_GLOB (a space-separated list of find -name patterns,
+# e.g. LINT_GLOB='*.ts *.tsx') for non-standard layouts (Storybook,
+# __mocks__, etc.); when LINT_GLOB is set, the test-file exclusion
+# is dropped so the caller takes full responsibility for the filter.
 ts_files=()
 if [ -d "$PLUGIN_ROOT/src" ]; then
+  if [ -n "${LINT_GLOB:-}" ]; then
+    find_name_args=()
+    for pat in $LINT_GLOB; do
+      if [ "${#find_name_args[@]}" -gt 0 ]; then
+        find_name_args+=( -o -name "$pat" )
+      else
+        find_name_args=( -name "$pat" )
+      fi
+    done
+    find_filter=( \( "${find_name_args[@]}" \) )
+  else
+    find_filter=( \( -name '*.ts' -o -name '*.tsx' \) \
+                  -not -name '*.test.ts' \
+                  -not -name '*.spec.ts' \
+                  -not -path '*/__tests__/*' )
+  fi
   while IFS= read -r f; do
     ts_files+=("$f")
-  done < <(find "$PLUGIN_ROOT/src" \( -name '*.ts' -o -name '*.tsx' \) -not -path '*/node_modules/*' 2>/dev/null)
+  done < <(find "$PLUGIN_ROOT/src" "${find_filter[@]}" -not -path '*/node_modules/*' 2>/dev/null)
 fi
 for top in "$PLUGIN_ROOT/main.ts"; do
   [ -f "$top" ] && ts_files+=("$top")
