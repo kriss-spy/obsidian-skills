@@ -1,6 +1,6 @@
 ---
 name: obsidian-daily-review
-description: Conduct an end-of-day review of today's work by triangulating signals in priority order: git commits first, then today's daily note, then vault exploration if the picture is still thin. Use when the user asks for a daily review, EOD wrap-up, end-of-day summary, what they did today, or wants to reflect on the day and plan tomorrow.
+description: "Conduct an end-of-day review of today's work by triangulating signals in priority order: git commits first, then today's daily note, then vault exploration if the picture is still thin. Use when the user asks for a daily review, EOD wrap-up, end-of-day summary, what they did today, or wants to reflect on the day and plan tomorrow."
 triggers:
   - obsidian daily review
   - end of day review
