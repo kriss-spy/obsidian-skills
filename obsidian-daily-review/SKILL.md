@@ -49,7 +49,9 @@ If the picture from git and the daily note is thin, explore the vault:
 
 ### 5. Synthesize and write
 
-Update today's daily note following the structure.
+- Update today's daily note following the note structure.
+- Do not guess and only write clear conclusions.
+- Do not create tasks in a daily review.
 
 ## Thin-signal handling
 
