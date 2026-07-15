@@ -18,6 +18,7 @@ npx skills add kriss-spy/obsidian-skills --skill obsidian-basics --skill obsidia
 
 | Skill | Description |
 |-------|-------------|
+| `obsidian-add-knowledge` | Reconcile sourced knowledge with existing notes, propose its placement, and write only after confirmation |
 | `obsidian-basics` | Core Obsidian operations, vault management, and note-taking workflows |
 | `obsidian-mcp` | MCP server integration for Obsidian |
 | `obsidian-performance` | Performance optimization and vault benchmarking |
