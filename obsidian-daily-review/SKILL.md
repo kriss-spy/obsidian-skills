@@ -55,5 +55,5 @@ If the picture from git and the daily note is thin, explore the vault:
 
 ## Thin-signal handling
 
-- If git has commits today, consider asking the user to do a daily commit before moving to the daily note.
+- If git have uncommited changes, consider asking the user to do a daily commit before moving to the daily note.
 - If no source yields evidence, say so plainly and ask the user what they worked on.

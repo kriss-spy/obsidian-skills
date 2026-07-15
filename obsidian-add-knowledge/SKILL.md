@@ -11,7 +11,7 @@ description: "Reconcile new knowledge with an Obsidian vault before writing it. 
 
 ### 1. Distill the payload
 
-Identify the subject, content type, useful claims, source, and likely related concepts. If the input is a URL, extract its substantive content and retain the URL for attribution.
+Identify the subject, content type, useful claims, source, and likely related concepts. If the input is a URL, extract its substantive content and retain the URL for attribution. Follow linked pages only when the landing page cannot support an accurate, useful note.
 
 **Complete when:** the subject and content type are explicit, and every externally sourced claim has a source to cite.
 
@@ -29,13 +29,13 @@ Choose one outcome:
 
 ### 3. Inspect the neighborhood
 
-For a new note, discover candidate locations from the vault's actual structure, navigation notes, and nearby examples. List each candidate folder and inspect representative files.
+For a new note, discover candidate locations from the vault's actual structure, navigation notes, and nearby examples. List each candidate folder and inspect the closest two or three peer notes. Derive the local filename, frontmatter, heading, source-attribution, and link conventions from those peers.
 
 Treat a folder with a strong repeated content type as a **dedicated neighborhood**. Place the note there only when its content type matches. Prefer the vault's established taxonomy over a generic taxonomy or a fixed depth target.
 
 Choose the narrowest existing neighborhood that can also accommodate plausible sibling notes. Introduce a new category folder only when those siblings make the category useful now.
 
-**Complete when:** the proposed parent exists or its new category is justified, its contents were inspected, and the payload matches the neighborhood's organizing principle.
+**Complete when:** the proposed parent exists or its new category is justified, its contents were inspected, the payload matches the neighborhood's organizing principle, and the local note shape is explicit.
 
 ### 4. Propose the change
 
@@ -47,9 +47,11 @@ Before any write, present:
 - Why this note owns the concept and why the location fits
 - Any source attribution and useful WikiLinks
 
+Resolve every proposed WikiLink against the vault, including relative paths. Make the preview follow the local note shape unless there is a stated reason to depart from it.
+
 Ask for confirmation. A path or format explicitly supplied by the user still requires a preview, but not a competing location search unless it conflicts with the vault.
 
-**Complete when:** the user has approved the exact target and substance of the change.
+**Complete when:** every proposed link resolves and the user has approved the exact target and substance of the change.
 
 ### 5. Write atomically
 
