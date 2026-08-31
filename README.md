@@ -22,6 +22,7 @@ npx skills add kriss-spy/obsidian-skills --skill obsidian-basics --skill obsidia
 | `obsidian-basics` | Core Obsidian operations, vault management, and note-taking workflows |
 | `obsidian-mcp` | MCP server integration for Obsidian |
 | `obsidian-performance` | Performance optimization and vault benchmarking |
+| `obsidian-plugman` | Manage Obsidian community plugins with the Plugman CLI: install, update, uninstall, inspect, and export |
 | `obsidian-plugin-bootstrap` | Bootstrap a new Obsidian plugin: environment setup, manifest, lifecycle, hot reload, and release build |
 | `obsidian-plugin-commands` | Registering and managing Obsidian plugin commands |
 | `obsidian-plugin-editor-api` | CodeMirror 6 extensions, Editor API, and markdown post-processing |
